@@ -175,7 +175,6 @@ start:
         read_str element_str, 10
         str_len element_str, len
         atoi element_str, el
-        itoa [el], element_str_out
 
         mov ax, [el]
         mov [ebx] , ax
