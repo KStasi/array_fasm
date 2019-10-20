@@ -164,6 +164,23 @@ macro array_len array_ptr, len_ptr {
     popa
 }
 
+macro zero_str str_ptr, len {
+    pusha
+    local .overit
+    local .loop
+    mov edi, str_ptr
+    xor eax, eax
+    jmp .overit
+    .loop:
+        inc edi
+        inc eax
+    .overit:
+        mov byte[edi], 0
+        cmp ax, len
+        jnz .loop
+    popa
+}
+
 macro sort_array array_ptr, len {
     pusha
     local .loop1
@@ -175,23 +192,23 @@ macro sort_array array_ptr, len {
     mov ax, len
     mov bx, 2
     mul bx
+    ; sub ax, 2
     mov cx, ax
     add ecx, array
     mov edi, array
     xor esi, esi
     .loop1:
-        mov esi, edi
-        sub si, 2
+        mov esi, ecx
         .loop2:
-            add esi, 2
-            cmp esi, ecx
+            sub esi, 2
+            cmp esi, edi
             jz .continue1
             mov ax, word[esi]
-            mov bx, word[edi]
+            mov bx, word[esi - 2]
             cmp ax, bx
             jle .loop2
-            mov [edi], ax
-            mov [esi], bx
+            mov word[esi], bx
+            mov word[esi - 2], ax
             jmp .loop2
         .continue1:
 
@@ -216,6 +233,7 @@ macro print_array array_ptr {
         jz .continue1
         mov ax, word[ebx]
         mov [el], ax
+        zero_str element_str_out, 6
         itoa [el], element_str_out
         str_len element_str_out, len
         put_str element_str_out, [len]
@@ -248,6 +266,7 @@ start:
         jnz read_array
     continue1:
 
+    mov [len], ax
     array_len array, len
     sort_array array, [len]
     print_array array
