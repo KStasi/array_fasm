@@ -226,7 +226,7 @@ macro print_array array_ptr {
     local .loop
     local .continue1
     local .ret_error
-    mov ebx, array
+    mov ebx, array_ptr
     xor ax, ax
     .loop:
         cmp word[ebx], 0
