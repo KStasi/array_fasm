@@ -183,7 +183,7 @@ macro sort_array array_ptr, len {
 
 macro print_array array_ptr, array_len {
     pusha
-    local .loop
+    local .loop1
     local .continue1 
     xor ecx, ecx
     mov ebx, array_ptr
@@ -191,7 +191,7 @@ macro print_array array_ptr, array_len {
     shl cx, 1
     add ecx, array_ptr
     xor ax, ax
-    .loop:
+    .loop1:
         cmp ecx, ebx
         jz .continue1
         mov ax, word[ebx]
@@ -201,7 +201,7 @@ macro print_array array_ptr, array_len {
         str_len element_str_out, len
         put_str element_str_out, [len]
         add ebx, 2
-        jmp .loop
+        jmp .loop1
     .continue1:
     popa
 }
@@ -258,6 +258,8 @@ macro read_array array_ptr, len_ptr {
     local .continue1
     local .loop1
     xor edx, edx
+    xor eax, eax
+    mov [len_ptr], ax
     lea edx, [array_ptr]
     .loop1:
         zero_str element_str, 10
@@ -283,6 +285,8 @@ macro read_2d_array array_ptr, row_len_ptr, col_len_ptr {
     lea ebx, [array_ptr]
 
     xor eax, eax
+    mov [col_len_ptr], ax
+    mov [row_len_ptr], ax
     .loop1:
         mov [arr_len], ax
         read_array ebx, arr_len
@@ -299,36 +303,108 @@ macro read_2d_array array_ptr, row_len_ptr, col_len_ptr {
     popa
 }
 
+macro find array_ptr, search_el, array_len, index_ptr, found_ptr {
+    pusha
+    local .continue1
+    local .loop1
+    xor ecx, ecx
+    mov ebx, array_ptr
+    mov cx, array_len
+    shl cx, 1
+    lea ecx, [array_ptr + ecx]
+    xor dx, dx
+    mov dx, search_el
+    xor ax, ax
+    mov [found_ptr], ax
+    .loop1:
+        cmp ecx, ebx
+        jz .continue1
+        cmp word[ebx], dx
+        jz .continue2
+        lea ebx, [ebx + 2]
+        jmp .loop1
+    .continue2:
+        mov ax, 1
+        mov [found_ptr], ax
+        sub ebx, array_ptr
+        mov ax, bx
+        mov bh, 2
+        div bh
+        mov [index_ptr], ax
+    .continue1:
+    popa
+}
+
+macro offset_to_indx ind, col, row_ind_ptr, col_ind_ptr {
+    pusha
+    xor dx, dx
+    mov ax, ind
+    ; mov [col_ind_ptr], ax
+    mov bx, col
+    div bx
+    mov [row_ind_ptr], ax
+    mov [col_ind_ptr], dx
+    popa
+}
+
 start:
     pusha
     str_len instr_str, len
     put_str instr_str, [len]
     read_2d_array array, row_len, col_len
 
-    ; array_len array, len
-    ; sort_array array, [len]
-    str_len instr_str, len
-    put_str instr_str, [len]
-
     zero_str element_str, 10
     read_str element_str, 10
     atoi element_str, el
 
-    print_2d_array array, [row_len], [col_len]
+    xor ax, ax
+    xor bx, bx 
+    mov ax, [row_len]
+    mov bx, [col_len]
+    mul bx
+    mov bx, 2
+    mul bx
+    mov [len], ax
+
+    find array, [el], [len], indx, fnd
+    cmp [fnd], 0
+    jz .end
+    offset_to_indx [indx], [col_len], el_row, el_col
+
+    zero_str element_str_out, 10
+    itoa [el_row], element_str_out
+    str_len element_str_out, len
+    put_str element_str_out, [len]
+
+    zero_str element_str_out, 10
+    itoa [el_col], element_str_out
+    str_len element_str_out, len
+    put_str element_str_out, [len]
+
+    .end:
     exit 0
     popa
     ret
 
 segment readable writeable
-instr_str db "Put arrays:", 0
-instr_str_search db "Put element search:", 0
+instr_str db "Put arrays:", 0x0a, 0
+instr_str_search db "Put element search:", 0x0a, 0
 break_symbol db 0x0a
 element_str rb 6
 element_str_out rb 6
-array rw 10
+array rw 100
 len dw 0
 el dw 0
 sum dw 0
 arr_len dw 0
 row_len dw 0
 col_len dw 0
+indx dw 0
+fnd dw 0
+el_row dw 0
+el_col dw 0
+; TODO:
+; - check array length
+; - check array row length 
+; - check namesrow_len
+; - fix read string
