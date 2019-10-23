@@ -150,13 +150,13 @@ macro atoi str_ptr, num_ptr
 
 macro print_num element {
     pusha
-    zero_str element_str, 10 ; clear string
-    zero_str element_str_out, 10 ; clear string
+    zero_str element_str, 6 ; clear string
+    zero_str element_str_out, 6 ; clear string
     itoa element, element_str_out ; convert number to string
     str_len element_str_out, len ; calculate string length 
     put_str element_str_out, [len] ; write string to fd=1
-    zero_str element_str, 10 ; clear string
-    zero_str element_str_out, 10 ; clear string
+    zero_str element_str, 6 ; clear string
+    zero_str element_str_out, 6 ; clear string
     popa
 }
 
@@ -238,8 +238,8 @@ macro read_array array_ptr, len_ptr {
     mov [len_ptr], ax ; reset length 
     lea edx, [array_ptr] ; point to the first element
     .loop1:
-        zero_str element_str, 10 ; clean string
-        read_str element_str, 10 ; read element
+        zero_str element_str, 6 ; clean string
+        read_str element_str, 6 ; read element
         cmp byte [element_str], 0x0a ; check if the end of array is reached
         jz .continue1 ; end if ZF=1
         atoi element_str, el ; convert to number
@@ -340,8 +340,8 @@ start:
     put_str instr_str, [len] ; print string
     read_2d_array array, row_len, col_len ; erad 2d array
 
-    zero_str element_str, 10 ; clean input string
-    read_str element_str, 10 ; read string
+    zero_str element_str, 6 ; clean input string
+    read_str element_str, 7 ; read string
     atoi element_str, el ; convert string to number
 
     xor ax, ax
