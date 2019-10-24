@@ -283,7 +283,6 @@ instr_str db "Put arrays:", 0x0a, 0x00
 element_str rb 6
 element_str_out rb 6
 array rw 100
-array_b dw 78, 67, 99, 88
 len dw 0
 el dw 0
 sum dw 0
