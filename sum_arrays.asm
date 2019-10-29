@@ -233,6 +233,7 @@ macro sum_array array_ptr, len, sum_ptr {
     xor ax, ax
     mov [sum_ptr], ax ; clean
     lea ebx, [array_ptr] ; point to first element 
+    ; mov ebx, array_ptr
     mov cx, len ; load array lngth (element counter)
     shl cx, 1 ; double to get length in bytes 
     lea ecx, [array_ptr + ecx] ; point to the element next to the last one

@@ -160,6 +160,20 @@ macro print_num element {
     popa
 }
 
+macro print_num_without_break element {
+    pusha
+    zero_str element_str, 6 ; clear string
+    zero_str element_str_out, 6 ; clear string
+    itoa element, element_str_out ; convert number to string
+    str_len element_str_out, len ; calculate string length 
+    sub [len], 1
+    put_str element_str_out, [len] ; write string to fd=1
+    zero_str element_str, 6 ; clear string
+    zero_str element_str_out, 6 ; clear string
+    popa
+}
+
+
 macro print_array array_ptr, array_len {
     pusha
     local .loop1
@@ -286,7 +300,7 @@ macro read_2d_array array_ptr, row_len_ptr, col_len_ptr {
     popa
 }
 
-macro find array_ptr, search_el, array_len, index_ptr, found_ptr {
+macro find array_ptr, search_el, array_len, resul_array_ptr, found_ptr {
     ; note: araay with any dimension is considered 
     ; to be 1d array with fixed length of elements
     ; thus it is posible to iterate throw them and
@@ -299,6 +313,7 @@ macro find array_ptr, search_el, array_len, index_ptr, found_ptr {
     xor dx, dx
     xor ax, ax
     lea ebx, [array_ptr] ; point to first element 
+    lea esi, [resul_array_ptr]
     mov cx, array_len ; load array lngth (element counter)
     shl cx, 1 ; double to get length in bytes 
     lea ecx, [array_ptr + ecx] ; point to the element next to the last one
@@ -312,25 +327,79 @@ macro find array_ptr, search_el, array_len, index_ptr, found_ptr {
         lea ebx, [ebx + 2] ; else point to the next element 
         jmp .loop1 ; go to next element
     .continue2:
-        mov ax, 1 
-        mov [found_ptr], ax ; set found flag
+        mov edi, ebx 
         sub ebx, array_ptr ; calculate index of found element
         mov ax, bx ; move to ax
         mov bh, 2 ; prepare divider to get index but not offset in bytes
         div bh ; divide
-        mov [index_ptr], ax ; store index
+        mov [esi], ax ; store index
+        add esi, 2
+        inc [found_ptr] ; set found flag
+
+        mov ebx, edi
+        xor edi, edi 
+        lea ebx, [ebx + 2] ; else point to the next element 
+        cmp ecx, ebx ; check if the end of the array is reached 
+        jnz .loop1 ; end if ZF=0
     .continue1:
     popa
 }
 
 macro offset_to_indx ind, col, row_ind_ptr, col_ind_ptr {
     pusha
-    xor dx, dx
+    xor edx, edx
+    xor eax, eax
+    xor ebx, ebx
     mov ax, ind ; load index
     mov bx, col ; load row length
     div bx ; calculate position if  index = column_counter * row_ind + col_ind
     mov [row_ind_ptr], ax ; load row_ind (quot) 
     mov [col_ind_ptr], dx ; load col_ind (reminder)
+    popa
+}
+
+macro print_2d_element index, col {
+    pusha
+    offset_to_indx index, col, el_row, el_col ; else convert offset to indexes
+
+    mov ah, "["
+    mov [breacket], ah
+    str_len breacket, len ; get string length
+    put_str breacket, [len] ; print string
+
+    print_num_without_break [el_row] ; print row index
+    
+    mov ah, ","
+    mov [breacket], ah
+    put_str breacket, [len] ; print string
+    print_num_without_break [el_col] ; print col index
+    
+    mov ah, "]"
+    mov [breacket], ah
+    put_str breacket, [len] ; print string
+    popa
+}
+
+macro print_result_array array_ptr, array_len, col {
+    pusha
+    local .loop1
+    local .continue1 
+    xor ecx, ecx
+    lea ebx, [array_ptr] ; poin to first array's element
+    mov cx, array_len ; store array length
+    shl cx, 1 ; double length as array element equel 2 bytes
+    add ecx, array_ptr ; point to the next word after the last array element 
+    xor ax, ax ; clean array 
+    mov [el], ax
+    .loop1:
+        cmp ecx, ebx ; check if the end of the array is reached 
+        jz .continue1 ; end if FZ=1
+        mov ax, word[ebx] ; load array element to AX
+        mov [el], ax ; store to persistant data
+        print_2d_element [el], col ; print num
+        lea ebx, [ebx + 2] ; point to next array's element
+        jmp .loop1 ; go to next element
+    .continue1:
     popa
 }
 
@@ -351,25 +420,25 @@ start:
     mul bx ; calculate total number of elements (store to DX:AX)
     mov [len], ax ; store array length
 
-    find array, [el], [len], indx, fnd ; look up the element
+    find array, [el], [len], resul_array, fnd ; look up the element
     cmp [fnd], 0 ; check if found
     jz .end ; end if not found (ZF=1)
-    offset_to_indx [indx], [col_len], el_row, el_col ; else convert offset to indexes
 
-    print_num [el_row] ; print row index
-    print_num [el_col] ; print col index
+    print_result_array resul_array, [fnd], [col_len]
     .end:
     exit 0
     popa
     ret
 
 segment readable writeable
-instr_str db "Put arrays:", 0x0a, 0
+instr_str db "Put arrays up to 100. Use \n as delimetr:", 0x0a, 0
 instr_str_search db "Put element search:", 0x0a, 0
 break_symbol db 0x0a
+breacket db "[", 0x0
 element_str rb 6
 element_str_out rb 6
 array rw 100
+resul_array rw 100
 len dw 0
 el dw 0
 sum dw 0
@@ -380,7 +449,3 @@ indx dw 0
 fnd dw 0
 el_row dw 0
 el_col dw 0
-
-; TODO:
-; - check array length
-; - check names row_len
